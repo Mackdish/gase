@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JOOUST STORE - Run & Deploy</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
+      main { max-width: 900px; margin: 0 auto; padding: 24px; }
+      h1 { margin: 0 0 12px; font-size: 24px; }
+      .card { border: 1px solid rgba(127,127,127,.25); border-radius: 14px; padding: 16px; margin: 14px 0; }
+      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      pre { padding: 12px; border-radius: 12px; overflow: auto; border: 1px solid rgba(127,127,127,.25); }
+      a { color: inherit; }
+      .muted { opacity: .8; }
+      .btn { display: inline-block; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(127,127,127,.35); text-decoration: none; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>JOOUST STORE</h1>
+      <p class="muted">
+        This project is a Next.js + PostgreSQL + Prisma app. VS Code Live Server can only serve static files,
+        so you must run the Next.js dev server for the real app.
+      </p>
+
+      <div class="card">
+        <h2 style="margin:0 0 8px">Run locally (recommended)</h2>
+        <div class="row" style="margin: 8px 0 12px;">
+          <a class="btn" href="http://localhost:3000" target="_blank" rel="noreferrer">Open Shop (localhost:3000)</a>
+          <a class="btn" href="http://localhost:3000/admin" target="_blank" rel="noreferrer">Open Admin (localhost:3000/admin)</a>
+        </div>
+        <ol>
+          <li>Copy <code>.env.example</code> to <code>.env</code> and set <code>DATABASE_URL</code> + <code>JWT_SECRET</code>.</li>
+          <li>Install dependencies.</li>
+          <li>Run migrations and seed.</li>
+          <li>Start the dev server.</li>
+        </ol>
+        <pre><code>npm install
+npm run prisma:migrate
+npm run db:seed
+npm run dev</code></pre>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 8px">Deploy live (Vercel)</h2>
+        <ol>
+          <li>Push the repo to GitHub.</li>
+          <li>Import it in Vercel (Framework: Next.js).</li>
+          <li>Set env vars in Vercel:
+            <ul>
+              <li><code>DATABASE_URL</code></li>
+              <li><code>JWT_SECRET</code></li>
+              <li><code>NEXT_PUBLIC_APP_URL</code></li>
+            </ul>
+          </li>
+          <li>Run production migrations against hosted DB:</li>
+        </ol>
+        <pre><code>npm run prisma:migrate:deploy</code></pre>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 8px">Notes</h2>
+        <ul>
+          <li>Live Server can open this <code>index.html</code> file, but it cannot run the Next.js backend or the database.</li>
+          <li>If the links above show an error, start the app by running <code>npm run dev</code>.</li>
+        </ul>
+      </div>
+
+      <p class="muted">File: <code>index.html</code></p>
+    </main>
+  </body>
+</html>
