@@ -2,8 +2,11 @@ import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
 import { productCreateSchema } from "@/lib/validators";
+import { requireAdmin } from "@/lib/admin";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard.error) return guard.error;
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
     include: { category: true },
@@ -13,6 +16,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard.error) return guard.error;
   const body = await req.json().catch(() => null);
   const parsed = productCreateSchema.safeParse(body);
   if (!parsed.success) return jsonError("Invalid input", 400);
@@ -32,7 +37,7 @@ export async function POST(req: NextRequest) {
       discount: parsed.data.discount ?? 0,
       stock: parsed.data.stock ?? 0,
       brand: parsed.data.brand,
-      images: parsed.data.images,
+      images: parsed.data.images[0],
       isFlashSale: parsed.data.isFlashSale ?? false,
       categoryId: parsed.data.categoryId,
     },
