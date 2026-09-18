@@ -2,8 +2,11 @@ import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
 import { categoryCreateSchema } from "@/lib/validators";
+import { requireAdmin } from "@/lib/admin";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard.error) return guard.error;
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
   });
@@ -12,6 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard.error) return guard.error;
   const body = await req.json().catch(() => null);
   const parsed = categoryCreateSchema.safeParse(body);
   if (!parsed.success) return jsonError("Invalid input", 400);
