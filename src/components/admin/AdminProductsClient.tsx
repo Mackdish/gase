@@ -66,7 +66,7 @@ export function AdminProductsClient({ categories }: { categories: Category[] }) 
         isFlashSale: p.isFlashSale,
         categoryId: p.categoryId,
         categoryName: p.category?.name ?? "",
-        imageUrl: Array.isArray(p.images) ? p.images[0] : undefined,
+        imageUrl: typeof p.images === "string" ? p.images : Array.isArray(p.images) ? p.images[0] : undefined,
       }));
       setRows(mapped);
     } finally {
