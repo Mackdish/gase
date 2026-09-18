@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "gase-db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_id": "cb1b98fe-eaa7-4882-80d1-7388d43d937",
       "migrations_dir": "migrations"
     }
   ]
