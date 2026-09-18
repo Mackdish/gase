@@ -2,8 +2,12 @@ import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
 import { orderStatusUpdateSchema } from "@/lib/validators";
+import { requireAdmin } from "@/lib/admin";
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req);
+  if (guard.error) return guard.error;
+
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null);
   const parsed = orderStatusUpdateSchema.safeParse(body);
