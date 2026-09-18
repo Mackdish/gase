@@ -1,118 +1,133 @@
 # JOOUST STORE
 
-Modern ecommerce web application built with:
+Modern ecommerce web application built with Next.js App Router, TypeScript, Tailwind CSS, Prisma and SQLite-compatible Cloudflare D1.
 
-- Next.js (App Router) + TypeScript
-- Tailwind CSS
-- SQLite + Prisma ORM
+## Cloudflare deployment
 
-## Project Structure
+This repository is configured for **Cloudflare Workers** using **vinext**. Cloudflare currently recommends vinext for full-stack Next.js applications on Workers. The application uses **Cloudflare D1** for production data storage through Prisma's D1 adapter.
 
-Key folders:
+### 1. Create the D1 database
 
-- `src/app/`
-  - `page.tsx`: customer-facing landing page (UI shell)
-  - `admin/page.tsx`: admin dashboard placeholder
-- `src/components/`
-  - `site/`: shared layout components (header/navigation)
-  - `shop/`: storefront UI components (product cards, etc.)
-- `src/lib/`
-  - `prisma.ts`: PrismaClient singleton
-- `prisma/`
-  - `schema.prisma`: database models
-  - `seed.ts`: sample seed data (admin, customer, categories, products)
-
-## Environment Variables
-
-This repo includes `.env.example`.
-
-1) Copy it to `.env`:
+From the repository root:
 
 ```bash
-cp .env.example .env
+npx wrangler login
+npx wrangler d1 create gase-db
 ```
 
-2) Update `DATABASE_URL` for SQLite.
+Copy the returned `database_id` into `wrangler.jsonc`:
 
-Example:
-
-```env
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="replace_me_with_a_long_random_string"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```json
+"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "gase-db",
+    "database_id": "YOUR_REAL_D1_DATABASE_ID",
+    "migrations_dir": "migrations"
+  }
+]
 ```
 
-## Database Setup (Prisma + SQLite)
-
-SQLite is used for local development. No external database needed.
-
-Then:
+### 2. Install and generate types
 
 ```bash
 npm install
+npm run cf:typegen
+npm run prisma:generate
+```
+
+If the Wrangler-generated `worker-configuration.d.ts` replaces the checked-in type file, commit the regenerated file.
+
+### 3. Configure the production secret
+
+Do **not** put `JWT_SECRET` in `wrangler.jsonc` or Git.
+
+```npx wrangler secret put JWT_SECRET```
+
+Set the production URL as a Worker variable or through the Cloudflare dashboard:
+
+```bash
+npx wrangler secret put JWT_SECRET
+```
+
+For non-secret public configuration, use `vars` in Wrangler or Cloudflare's Worker settings.
+
+### 4. Apply the D1 schema
+
+The initial schema is in:
+
+```
+migrations/0001_init/migration.sql
+```
+
+Apply it to production:
+
+```bash
+npx wrangler d1 migrations apply gase-db --remote
+```
+
+### 5. Test the Cloudflare build
+
+```bash
+npm run build:vinext
+```
+
+Run the Cloudflare runtime locally with:
+
+```bash
+npx wrangler dev
+```
+
+### 6. Deploy
+
+```bash
+npm run deploy
+```
+
+The deployment uses Cloudflare Workers rather than the old Cloudflare Pages static-export path. This is important because the store uses server-side rendering, middleware, route handlers and database access.
+
+### Cloudflare dashboard / Git deployments
+
+You can connect this GitHub repository to **Workers Builds**. Use:
+
+- **Build command:** `npm run build:vinext`
+- **Deploy command:** `npx wrangler deploy`
+- **Production branch:** `main`
+
+Configure the D1 binding named `DB` and the `JWT_SECRET` secret in the Worker environment.
+
+## Local development
+
+For the traditional Node/Next.js development environment:
+
+```bash
+cp .env.example .env
+npm install
 npm run prisma:migrate
 npm run db:seed
-```
-
-## Production Database Migrations
-
-For production, consider using PostgreSQL. Update DATABASE_URL accordingly and run:
-
-```bash
-npm run prisma:migrate:deploy
-```
-
-## Run Locally
-
-```bash
 npm run dev
 ```
 
-Open:
+For Cloudflare-compatible development:
 
-- `http://localhost:3000` (shop)
-- `http://localhost:3000/admin` (admin dashboard)
+```npm run dev:vinext```
 
-## Seeded Accounts
+The Cloudflare-compatible path expects the D1 binding to be configured in `wrangler.jsonc`.
 
-These users are created by `npm run db:seed`:
+## Important production notes
 
-- Admin
-  - Email: `admin@gas-shop.local`
-  - Password: `Admin123!`
-- Admin
-  - Email: `tesheric9@gmail.com`
-  - Password: `121212`
-- Customer
-  - Email: `customer@gas-shop.local`
-  - Password: `Customer123!`
+- SQLite files are not suitable as the persistent production database on Workers; use D1.
+- The D1 database ID in `wrangler.jsonc` must be replaced with the real ID from your Cloudflare account.
+- `JWT_SECRET` must be stored as a Cloudflare Worker secret.
+- The existing `prisma/seed.ts` is a Node/SQLite seed script. Do not run it directly against production D1. Create/apply a D1-compatible seed migration or seed through an authenticated administrative workflow.
+- Product image uploads currently depend on the application's existing storage implementation. For production-scale uploads, Cloudflare R2 is the appropriate next step.
 
-## Notes
+## Project structure
 
-- Admin routes are protected by middleware (`/admin` and `/api/admin`).
-- Image hosting defaults to local storage (`public/uploads`). For production, use an external provider (Cloudinary recommended).
-
-## Deployment (Vercel)
-
-1) Push this repo to GitHub.
-
-2) Create a database (SQLite for simple deployments, or PostgreSQL from Neon, Supabase, etc.).
-
-3) Create a new Vercel project and set environment variables:
-
-- `DATABASE_URL` (SQLite: "file:./dev.db" or hosted DB URL)
-- `JWT_SECRET` (long random string)
-- `NEXT_PUBLIC_APP_URL` (your Vercel URL, e.g. `https://your-app.vercel.app`)
-
-4) Deploy.
-
-5) Run migrations on the database:
-
-- For SQLite: run locally or in CI
-- For hosted DB: run `prisma migrate deploy` against the DB
-
-6) (Optional) Seed initial data:
-
-```bash
-npm run db:seed
-```
+- `src/app/` — storefront, checkout, account and admin pages
+- `src/components/` — UI components
+- `src/lib/` — authentication, Prisma and helpers
+- `prisma/schema.prisma` — database model
+- `migrations/` — Cloudflare D1 migrations
+- `vite.config.ts` — vinext + Cloudflare Vite configuration
+- `wrangler.jsonc` — Cloudflare Worker and D1 configuration
