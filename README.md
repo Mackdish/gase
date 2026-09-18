@@ -42,7 +42,9 @@ If the Wrangler-generated `worker-configuration.d.ts` replaces the checked-in ty
 
 Do **not** put `JWT_SECRET` in `wrangler.jsonc` or Git.
 
-```npx wrangler secret put JWT_SECRET```
+```bash
+npx wrangler secret put JWT_SECRET
+```
 
 Set the production URL as a Worker variable or through the Cloudflare dashboard:
 
@@ -110,7 +112,9 @@ npm run dev
 
 For Cloudflare-compatible development:
 
-```npm run dev:vinext```
+```bash
+npm run dev:vinext
+```
 
 The Cloudflare-compatible path expects the D1 binding to be configured in `wrangler.jsonc`.
 
