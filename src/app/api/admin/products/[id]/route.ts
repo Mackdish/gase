@@ -22,9 +22,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (conflict) return jsonError("Product slug already exists", 409);
   }
 
+  const { images, ...productData } = parsed.data;
   const product = await prisma.product.update({
     where: { id },
-    data: parsed.data,
+    data: {
+      ...productData,
+      ...(images ? { images: images[0] } : {}),
+    },
   });
 
   return jsonOk({ product });
