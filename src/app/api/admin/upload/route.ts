@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { storeImage } from "@/lib/imageStorage";
+import { requireAdmin } from "@/lib/admin";
+import { NextRequest } from "next/server";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard.error) return guard.error;
   const formData = await req.formData();
   const file = formData.get("file");
 
