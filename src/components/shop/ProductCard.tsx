@@ -78,12 +78,9 @@ export function ProductCard({
             ) : null}
           </div>
 
-          <button
-            type="button"
-            className="inline-flex h-9 items-center justify-center rounded-xl bg-zinc-950 px-3 text-xs font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-          >
-            Add
-          </button>
+          <span className="inline-flex h-9 items-center justify-center rounded-xl bg-zinc-950 px-3 text-xs font-semibold text-white transition group-hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:group-hover:bg-zinc-200">
+            View
+          </span>
         </div>
       </div>
     </Wrapper>
