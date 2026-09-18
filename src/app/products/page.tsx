@@ -25,8 +25,8 @@ export default async function ProductsPage({
       q
         ? {
           OR: [
-            { name: { contains: q, mode: "insensitive" as const } },
-            { brand: { contains: q, mode: "insensitive" as const } },
+            { name: { contains: q } },
+            { brand: { contains: q } },
           ],
         }
         : {},
