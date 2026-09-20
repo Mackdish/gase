@@ -14,16 +14,20 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 async function fetchDbCartCount(): Promise<number> {
   const res = await fetch("/api/cart", { method: "GET" });
-  if (!res.ok) return 0;
+  if (!res.ok) throw new Error("Could not load cart");
   const json = (await res.json().catch(() => null)) as any;
   const items = json?.data?.cart?.items;
   if (!Array.isArray(items)) return 0;
-  return items.reduce((sum: number, it: any) => sum + (it.quantity ?? 0), 0);
+  return items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 0), 0);
 }
 
-async function isLoggedIn(): Promise<boolean> {
-  const res = await fetch("/api/auth/me", { method: "GET" });
-  return res.ok;
+async function getLoggedIn(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/me", { method: "GET" });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -31,65 +35,76 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [authed, setAuthed] = useState(false);
 
   const refresh = useCallback(async () => {
-    const logged = await isLoggedIn();
+    const logged = await getLoggedIn();
     setAuthed(logged);
 
     if (logged) {
-      setCartCount(await fetchDbCartCount());
+      try {
+        setCartCount(await fetchDbCartCount());
+      } catch {
+        setCartCount(0);
+      }
       return;
     }
 
-    const guest = readGuestCart();
-    setCartCount(guestCartCount(guest));
+    setCartCount(guestCartCount(readGuestCart()));
   }, []);
 
-  async function syncGuestToDb() {
+  const syncGuestToDb = useCallback(async () => {
     const guest = readGuestCart();
-    const entries = Object.entries(guest).filter(([, qty]) => qty && qty > 0);
+    const entries = Object.entries(guest).filter(([, qty]) => Number(qty) > 0);
     if (entries.length === 0) return;
 
+    const remaining: GuestCart = {};
+
     for (const [productId, qty] of entries) {
-      await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: qty }),
-      }).catch(() => null);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, quantity: qty }),
+        });
+        if (!res.ok) {
+          remaining[productId] = qty;
+        }
+      } catch {
+        remaining[productId] = qty;
+      }
     }
 
-    clearGuestCart();
-  }
+    writeGuestCart(remaining);
+    if (Object.keys(remaining).length === 0) clearGuestCart();
+  }, []);
 
   const addItem = useCallback(async (productId: string, quantity = 1) => {
-    if (await isLoggedIn()) {
-      await fetch("/api/cart", {
+    if (await getLoggedIn()) {
+      const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity }),
       });
+      const json = (await res.json().catch(() => null)) as any;
+      if (!res.ok) throw new Error(json?.error ?? "Could not add item");
       await refresh();
       return;
     }
 
-    const guest: GuestCart = readGuestCart();
+    const guest = readGuestCart();
     guest[productId] = (guest[productId] ?? 0) + quantity;
     writeGuestCart(guest);
     setCartCount(guestCartCount(guest));
   }, [refresh]);
 
   useEffect(() => {
-    refresh();
+    void refresh();
 
     async function onAuthChanged() {
-      const logged = await isLoggedIn();
-      setAuthed(logged);
-      if (logged) {
-        await syncGuestToDb();
-      }
+      if (await getLoggedIn()) await syncGuestToDb();
       await refresh();
     }
 
     function onCartUpdated() {
-      refresh();
+      void refresh();
     }
 
     window.addEventListener("gas-shop-auth-changed", onAuthChanged);
@@ -99,15 +114,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("gas-shop-auth-changed", onAuthChanged);
       window.removeEventListener("gas-shop-cart-updated", onCartUpdated);
     };
-  }, [refresh]);
+  }, [refresh, syncGuestToDb]);
 
   const value = useMemo<CartContextValue>(
-    () => ({
-      cartCount,
-      isAuthenticated: authed,
-      refresh,
-      addItem,
-    }),
+    () => ({ cartCount, isAuthenticated: authed, refresh, addItem }),
     [cartCount, authed, refresh, addItem]
   );
 
