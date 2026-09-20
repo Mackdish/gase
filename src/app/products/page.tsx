@@ -54,16 +54,23 @@ export default async function ProductsPage({
     ],
   };
 
-  const [items, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      include: { category: true },
-      orderBy: [{ isFlashSale: "desc" }, { createdAt: "desc" }],
-      skip,
-      take: pageSize,
-    }),
-    prisma.product.count({ where }),
-  ]);
+  let items: any[] = [];
+  let total = 0;
+
+  try {
+    [items, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: { category: true },
+        orderBy: [{ isFlashSale: "desc" }, { createdAt: "desc" }],
+        skip,
+        take: pageSize,
+      }),
+      prisma.product.count({ where }),
+    ]);
+  } catch (error) {
+    console.error("Products page database query failed:", error);
+  }
 
   return (
     <div className="min-h-screen font-sans text-zinc-950 dark:text-zinc-50">
