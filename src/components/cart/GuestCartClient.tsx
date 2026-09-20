@@ -72,6 +72,9 @@ export function GuestCartClient() {
 
       // Notify cart count update
       window.dispatchEvent(new Event("gas-shop-cart-updated"));
+    } catch (e) {
+      console.error("Guest cart load failed:", e);
+      setError("Could not load cart items. Please try again.");
     } finally {
       setLoading(false);
     }
