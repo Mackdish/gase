@@ -1,17 +1,30 @@
 import { Suspense } from "react";
+import { env } from "cloudflare:workers";
 import { HeaderClient } from "./HeaderClient";
 
+type CategoryOption = { slug: string; name: string };
+
 export async function HeaderServer() {
-  // Keep the initial storefront render independent of D1. Categories are
-  // loaded by the products experience after the Worker is running, so a
-  // database/binding problem can never prevent the homepage shell from rendering.
+  let categories: CategoryOption[] = [];
+
+  try {
+    if (env.DB) {
+      const result = await env.DB.prepare(
+        'SELECT "slug", "name" FROM "Category" ORDER BY "name" ASC LIMIT 20'
+      ).all<CategoryOption>();
+      categories = result.results ?? [];
+    }
+  } catch (error) {
+    console.error("Header category query failed:", error);
+  }
+
   return (
     <Suspense
       fallback={
         <div className="h-[104px] border-b border-black/5 dark:border-white/10" />
       }
     >
-      <HeaderClient categories={[]} />
+      <HeaderClient categories={categories} />
     </Suspense>
   );
 }
