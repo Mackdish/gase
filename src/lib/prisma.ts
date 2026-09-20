@@ -2,43 +2,33 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaD1 } from "@prisma/adapter-d1";
 import { env } from "cloudflare:workers";
 
-declare global {
-  var prisma: PrismaClient | undefined;
-}
+const clients = new WeakMap<object, PrismaClient>();
 
-let client: PrismaClient | undefined;
+function getPrismaClient() {
+  const db = env.DB;
 
-function createPrismaClient() {
-  if (!env.DB) {
+  if (!db) {
     throw new Error("Cloudflare D1 binding DB is not configured.");
   }
 
-  return new PrismaClient({
-    adapter: new PrismaD1(env.DB),
+  const key = db as unknown as object;
+  const existing = clients.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const client = new PrismaClient({
+    adapter: new PrismaD1(db),
   });
-}
 
-function getPrismaClient() {
-  if (globalThis.prisma) {
-    return globalThis.prisma;
-  }
-
-  if (!client) {
-    client = createPrismaClient();
-  }
-
-  globalThis.prisma = client;
+  clients.set(key, client);
   return client;
 }
 
 /**
- * Cloudflare bindings are request-scoped and are not guaranteed to exist while
- * modules are being evaluated. Keep Prisma lazy so importing this module cannot
- * crash the RSC render before the Worker request has established its bindings.
- *
- * The proxy preserves the existing `prisma.user.findMany()` style used
- * throughout the application while creating the real Prisma client only when
- * the first database operation is accessed.
+ * Keep client creation lazy because Cloudflare bindings are only available
+ * during a Worker request. The cache is keyed by the actual D1 binding object
+ * so a client can never accidentally be reused with a different database.
  */
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, property) {
