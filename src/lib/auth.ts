@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
+import { env } from "cloudflare:workers";
 
 export type JwtRole = "ADMIN" | "CUSTOMER";
 
@@ -13,7 +14,7 @@ const COOKIE_NAME = "gas_shop_token";
 const JWT_ALG = "HS256";
 
 function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
+  const secret = env.JWT_SECRET ?? process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET is not set");
   }
