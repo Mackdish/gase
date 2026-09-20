@@ -170,11 +170,7 @@ export function AuthCard({ mode }: AuthCardProps) {
       </div>
 
       <div className="mt-4 rounded-2xl border border-black/10 bg-white px-4 py-3 text-xs text-zinc-600 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-300">
-        Seeded accounts:
-        <div className="mt-1">
-          Admin: admin@gas-shop.local / Admin123!
-        </div>
-        <div>Customer: customer@gas-shop.local / Customer123!</div>
+        New deployments require the administrator account to be provisioned in the production database.
       </div>
     </div>
   );
