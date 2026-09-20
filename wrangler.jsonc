@@ -2,7 +2,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "gase-store",
   "compatibility_date": "2026-09-18",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "main": "vinext/server/fetch-handler",
   "preview_urls": true,
   "observability": {
@@ -15,5 +17,10 @@
       "database_id": "cb1b98fe-eaa7-4882-80d1-7388d43d937",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "secrets": {
+    "required": [
+      "JWT_SECRET"
+    ]
+  }
 }
