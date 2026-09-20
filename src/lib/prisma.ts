@@ -11,12 +11,15 @@ function createPrismaClient() {
     throw new Error("Cloudflare D1 binding DB is not configured.");
   }
 
-  const adapter = new PrismaD1(env.DB);
-  return new PrismaClient({ adapter });
+  return new PrismaClient({
+    adapter: new PrismaD1(env.DB),
+  });
 }
 
-export const prisma = global.prisma ?? createPrismaClient();
+// Reuse one client in the Worker isolate. This avoids constructing a client during
+// build-time/module evaluation when the D1 binding is not available yet.
+export const prisma = globalThis.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
+if (!globalThis.prisma) {
+  globalThis.prisma = prisma;
 }
