@@ -1,75 +1,51 @@
+import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = "admin@gas-shop.local";
-  const admin2Email = "tesheric9@gmail.com";
-  const customerEmail = "customer@gas-shop.local";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
 
-  const [adminPasswordHash, admin2PasswordHash, customerPasswordHash] = await Promise.all([
-    bcrypt.hash("Admin123!", 10),
-    bcrypt.hash("121212", 10),
-    bcrypt.hash("Customer123!", 10),
+  if (!adminEmail || !adminPassword) {
+    throw new Error(
+      "Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD before running the seed."
+    );
+  }
+
+  const [gas, electrical, furnitures] = await Promise.all([
+    prisma.category.upsert({
+      where: { slug: "gas" },
+      update: { name: "GAS" },
+      create: { name: "GAS", slug: "gas" },
+    }),
+    prisma.category.upsert({
+      where: { slug: "electrical-equipments" },
+      update: { name: "ELECTRICAL EQUIPMENTS" },
+      create: { name: "ELECTRICAL EQUIPMENTS", slug: "electrical-equipments" },
+    }),
+    prisma.category.upsert({
+      where: { slug: "furnitures" },
+      update: { name: "FURNITURES" },
+      create: { name: "FURNITURES", slug: "furnitures" },
+    }),
   ]);
 
-  const gas = await prisma.category.upsert({
-    where: { slug: "gas" },
-    update: { name: "GAS" },
-    create: { name: "GAS", slug: "gas" },
-  });
-
-  const electrical = await prisma.category.upsert({
-    where: { slug: "electrical-equipments" },
-    update: { name: "ELECTRICAL EQUIPMENTS" },
-    create: { name: "ELECTRICAL EQUIPMENTS", slug: "electrical-equipments" },
-  });
-
-  const furnitures = await prisma.category.upsert({
-    where: { slug: "furnitures" },
-    update: { name: "FURNITURES" },
-    create: { name: "FURNITURES", slug: "furnitures" },
-  });
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
-      name: "Admin",
+      name: "Administrator",
       role: "ADMIN",
-      passwordHash: adminPasswordHash,
+      passwordHash,
     },
     create: {
-      name: "Admin",
+      name: "Administrator",
       email: adminEmail,
       role: "ADMIN",
-      passwordHash: adminPasswordHash,
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: admin2Email },
-    update: {
-      name: "Admin",
-      role: "ADMIN",
-      passwordHash: admin2PasswordHash,
-    },
-    create: {
-      name: "Admin",
-      email: admin2Email,
-      role: "ADMIN",
-      passwordHash: admin2PasswordHash,
-    },
-  });
-
-  const customer = await prisma.user.upsert({
-    where: { email: customerEmail },
-    update: {},
-    create: {
-      name: "Customer",
-      email: customerEmail,
-      role: "CUSTOMER",
-      passwordHash: customerPasswordHash,
+      passwordHash,
     },
   });
 
@@ -124,87 +100,22 @@ async function main() {
     },
   ];
 
-  for (const p of products) {
+  for (const product of products) {
     await prisma.product.upsert({
-      where: { slug: p.slug },
-      update: {},
-      create: p,
+      where: { slug: product.slug },
+      update: product,
+      create: product,
     });
   }
 
-  const earbuds = await prisma.product.findUnique({
-    where: { slug: "wireless-earbuds-pro" },
-    select: { id: true },
-  });
-
-  const sneakers = await prisma.product.findUnique({
-    where: { slug: "mens-minimal-sneakers" },
-    select: { id: true },
-  });
-
-  await prisma.cart.upsert({
-    where: { userId: customer.id },
-    update: {
-      items: {
-        deleteMany: {},
-      },
-    },
-    create: {
-      userId: customer.id,
-    },
-  });
-
-  const cart = await prisma.cart.findUnique({
-    where: { userId: customer.id },
-    select: { id: true },
-  });
-
-  if (cart && earbuds && sneakers) {
-    await prisma.cartItem.upsert({
-      where: { cartId_productId: { cartId: cart.id, productId: earbuds.id } },
-      update: {},
-      create: { cartId: cart.id, productId: earbuds.id, quantity: 1 },
-    });
-    await prisma.cartItem.upsert({
-      where: { cartId_productId: { cartId: cart.id, productId: sneakers.id } },
-      update: {},
-      create: { cartId: cart.id, productId: sneakers.id, quantity: 2 },
-    });
-  }
-
-  const firstProduct = await prisma.product.findUnique({
-    where: { slug: "wireless-earbuds-pro" },
-    select: { id: true },
-  });
-
-  if (firstProduct) {
-    await prisma.review.upsert({
-      where: {
-        userId_productId: {
-          userId: customer.id,
-          productId: firstProduct.id,
-        },
-      },
-      update: {
-        rating: 5,
-        comment: "Great sound and battery life.",
-      },
-      create: {
-        userId: customer.id,
-        productId: firstProduct.id,
-        rating: 5,
-        comment: "Great sound and battery life.",
-      },
-    });
-  }
+  console.log("Seed completed.");
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
