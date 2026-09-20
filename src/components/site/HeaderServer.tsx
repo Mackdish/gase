@@ -1,21 +1,30 @@
 import { Suspense } from "react";
-import { prisma } from "@/lib/prisma";
+import { env } from "cloudflare:workers";
 import { HeaderClient } from "./HeaderClient";
 
+type CategoryRow = {
+  slug: string;
+  name: string;
+};
+
 export async function HeaderServer() {
-  let categories: { slug: string; name: string }[] = [];
+  let categories: CategoryRow[] = [];
 
   try {
-    categories = await prisma.category.findMany({
-      select: { slug: true, name: true },
-      orderBy: { name: "asc" },
-    });
+    const result = await env.DB.prepare(
+      "SELECT slug, name FROM Category ORDER BY name ASC"
+    ).all<CategoryRow>();
+
+    categories = result.results ?? [];
   } catch (error) {
     console.error("Header category query failed:", error);
   }
 
   const preferredOrder = ["gas", "electrical-equipments", "furnitures"];
-  const preferredIndex = new Map(preferredOrder.map((slug, idx) => [slug, idx] as const));
+  const preferredIndex = new Map(
+    preferredOrder.map((slug, idx) => [slug, idx] as const)
+  );
+
   categories.sort((a, b) => {
     const ai = preferredIndex.get(a.slug);
     const bi = preferredIndex.get(b.slug);
@@ -26,7 +35,11 @@ export async function HeaderServer() {
   });
 
   return (
-    <Suspense fallback={<div className="h-[104px] border-b border-black/5 dark:border-white/10" />}>
+    <Suspense
+      fallback={
+        <div className="h-[104px] border-b border-black/5 dark:border-white/10" />
+      }
+    >
       <HeaderClient categories={categories} />
     </Suspense>
   );
