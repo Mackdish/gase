@@ -3,10 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { HeaderClient } from "./HeaderClient";
 
 export async function HeaderServer() {
-  const categories = await prisma.category.findMany({
-    select: { slug: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  let categories: { slug: string; name: string }[] = [];
+
+  try {
+    categories = await prisma.category.findMany({
+      select: { slug: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  } catch (error) {
+    console.error("Header category query failed:", error);
+  }
 
   const preferredOrder = ["gas", "electrical-equipments", "furnitures"];
   const preferredIndex = new Map(preferredOrder.map((slug, idx) => [slug, idx] as const));
