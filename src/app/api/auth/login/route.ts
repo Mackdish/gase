@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     value: token,
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: new URL(req.url).protocol === "https:",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
